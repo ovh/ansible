@@ -88,23 +88,19 @@ template_json:
   sample: {
       "service_json": [
         {
-            "algorithm": "1", 
-            "goodsla": "99.9990", 
-            "name": "apache2 availability", 
-            "serviceid": "9", 
-            "showsla": "0", 
-            "sortorder": "1", 
-            "status": "4", 
+            "algorithm": "1",
+            "goodsla": "99.9990",
+            "name": "apache2 availability",
+            "serviceid": "9",
+            "showsla": "0",
+            "sortorder": "1",
+            "status": "4",
             "triggerid": "16313"
         }
     ]
 '''
 
-from distutils.version import LooseVersion
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils._text import to_native
-import json
-import traceback
 
 
 try:
@@ -156,8 +152,8 @@ class Service(object):
             if not hosts:
                 self._module.fail_json(msg="Target host %s not found for trigger" % trigger_host)
             host_id = hosts[0]['hostid']
-    
-            triggers = self._zapi.trigger.get({'filter':{'description':trigger_name},'hostids':[host_id]})
+
+            triggers = self._zapi.trigger.get({'filter':{'description':trigger_name}, 'hostids':[host_id]})
             if not triggers:
                 self._module.fail_json(msg="Trigger "+trigger_name+" not found on host "+ trigger_host)
             trigger_id = triggers[0]['triggerid']
@@ -167,7 +163,7 @@ class Service(object):
             'algorithm': algorithm,
             'showsla': calculate_sla,
             'sortorder': 1,
-            'goodsla': format(sla,'.4f'), #sla has 4 decimals
+            'goodsla': format(sla, '.4f'), #sla has 4 decimals
             'triggerid' : trigger_id
         }
 
@@ -187,7 +183,7 @@ class Service(object):
         generated_config = self.generate_service_config(name, parent, sla, calculate_sla, trigger_name, trigger_host, algorithm)
         live_config = self.dump_services(service_id)[0]
 
-        item_to_check = ['name','showsla','algorithm','triggerid','sortorder','goodsla']
+        item_to_check = ['name', 'showsla', 'algorithm', 'triggerid', 'sortorder', 'goodsla']
         change = False
         for item in item_to_check:
             if str(generated_config[item]) != str(live_config[item]):
@@ -219,7 +215,7 @@ def main():
             algorithm=dict(default='one_child', required=False, choices=['no', 'one_child', 'all_childs']),
             trigger_name=dict(type='str', required=False),
             trigger_host=dict(type='str', required=False),
-            state=dict(default="present", choices=['present', 'absent','dump']),
+            state=dict(default="present", choices=['present', 'absent', 'dump']),
             timeout=dict(type='int', default=10)
         ),
         supports_check_mode=True
@@ -227,8 +223,8 @@ def main():
 
     if not HAS_ZABBIX_API:
         module.fail_json(msg="Missing required zabbix-api module " +
-                             "(check docs or install with: " +
-                             "pip install zabbix-api)")
+                         "(check docs or install with: " +
+                         "pip install zabbix-api)")
 
     server_url = module.params['server_url']
     login_user = module.params['login_user']
@@ -252,9 +248,9 @@ def main():
     try:
         zbx = ZabbixAPI(server_url, timeout=timeout, user=http_login_user, passwd=http_login_password, validate_certs=validate_certs)
         zbx.login(login_user, login_password)
-    except ZabbixAPIException as e:
-        module.fail_json(msg="Failed to connect to Zabbix server: %s" % e)
-    
+    except ZabbixAPIException as error:
+        module.fail_json(msg="Failed to connect to Zabbix server: %s" % error)
+
     #load service module
     service = Service(module, zbx)
     service_ids = service.get_service_ids(name)
@@ -276,7 +272,7 @@ def main():
     elif state == "present":
         #does not exists going to create it
         if not service_ids:
-            service.create_service(name,parent,sla,calculate_sla,trigger_name,trigger_host,algorithm)
+            service.create_service(name, parent, sla, calculate_sla, trigger_name, trigger_host, algorithm)
             module.exit_json(changed=True, msg="Service %s created" %name)
         #else we update it if needed
         else:
