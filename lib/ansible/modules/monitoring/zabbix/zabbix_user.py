@@ -155,34 +155,34 @@ template_json:
   type: str
   sample: {
     "user_json": {
-        "alias": "test", 
-        "attempt_clock": "0", 
-        "attempt_failed": "0", 
-        "attempt_ip": "", 
-        "autologin": "0", 
-        "autologout": "15m", 
-        "lang": "en_GB", 
+        "alias": "test",
+        "attempt_clock": "0",
+        "attempt_failed": "0",
+        "attempt_ip": "",
+        "autologin": "0",
+        "autologout": "15m",
+        "lang": "en_GB",
         "medias": [
             {
-                "active": "0", 
-                "mediaid": "8", 
-                "mediatypeid": "1", 
-                "period": "1-7,00:00-24:00", 
+                "active": "0",
+                "mediaid": "8",
+                "mediatypeid": "1",
+                "period": "1-7,00:00-24:00",
                 "sendto": [
                     "user@mail.com"
-                ], 
-                "severity": "63", 
+                ],
+                "severity": "63",
                 "userid": "12"
             }
-        ], 
-        "name": "", 
-        "refresh": "30s", 
-        "rows_per_page": "50", 
-        "surname": "", 
-        "theme": "default", 
-        "type": "1", 
-        "url": "", 
-        "userid": "12", 
+        ],
+        "name": "",
+        "refresh": "30s",
+        "rows_per_page": "50",
+        "surname": "",
+        "theme": "default",
+        "type": "1",
+        "url": "",
+        "userid": "12",
         "usrgrps": [
             {
                 "usrgrpid": "19"
@@ -194,10 +194,6 @@ template_json:
 
 from distutils.version import LooseVersion
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils._text import to_native
-import json
-import traceback
-
 
 try:
     from zabbix_api import ZabbixAPI, ZabbixAPIException
@@ -244,11 +240,11 @@ class User(object):
             if not groups:
                 self._module.fail_json(msg="Target user group %s not found" % group)
             group_id = groups[0]['usrgrpid']
-            api_groups.append( {'usrgrpid':group_id} )
+            api_groups.append({'usrgrpid':group_id})
 
         api_medias = []
         for media in medias:
-            media_types = self._zapi.mediatype.get({'filter': {'description': media['media_type'] }})
+            media_types = self._zapi.mediatype.get({'filter': {'description': media['media_type']}})
             if not media_types:
                 self._module.fail_json(msg="Target media type %s not found" % media['media_type'])
             media_type_id = media_types[0]['mediatypeid']
@@ -286,7 +282,7 @@ class User(object):
         return request
 
     def compare_config(self, generated, current):
-        items_to_check = ['alias','autologin','autologout','lang','name','refresh','rows_per_page','surname','theme','type']
+        items_to_check = ['alias', 'autologin', 'autologout', 'lang', 'name', 'refresh', 'rows_per_page', 'surname', 'theme', 'type']
         for item in items_to_check:
             if str(generated[item]) != str(current[item]):
                 return True
@@ -301,23 +297,23 @@ class User(object):
         new_cmedia = []
         for media in current['medias']:
             new_cmedia.append(media['mediatypeid']+media['severity']+media['period']+media['active']+''.join(media['sendto']))
-       
+
         if set(new_gmedia) != set(new_cmedia):
-            return True;
+            return True
 
         if 'passwd' in generated:
-            return self.check_diff_password(generated['alias'],generated['passwd'])
+            return self.check_diff_password(generated['alias'], generated['passwd'])
 
         return False
-    
+
     def check_diff_password(self, user, password):
         try:
             self._zapi.login(user, password, False)
-        except ZabbixAPIException as e:
+        except ZabbixAPIException as error:
             #error code for auth failed
-            if '32500' in str(e):
+            if '32500' in str(error):
                 return True
-            self._module.fail_json(msg="Failed to connect to Zabbix server: %s" % e)
+            self._module.fail_json(msg="Failed to connect to Zabbix server: %s" % error)
         #auth again with right credentials
         self._zapi.login()
         return False
@@ -331,7 +327,7 @@ class User(object):
         current_config = self.dump(user_id)
         generated_config = self.generate_config(alias, name, surname, password, user_type, groups, medias, autologin, autologout, lang, refresh, rows_per_page, theme)
 
-        changed = self.compare_config(generated_config,current_config) 
+        changed = self.compare_config(generated_config, current_config)
 
         if self._module.check_mode:
             self._module.exit_json(changed=changed)
@@ -377,7 +373,7 @@ def main():
             refresh=dict(type='str', default='30s', required=False),
             rows_per_page=dict(type='int', default=50, required=False),
             theme=dict(default='default', required=False, choices=['default', 'blue-theme', 'dark-theme']),
-            state=dict(default="present", required=False, choices=['present', 'absent','dump']),
+            state=dict(default="present", required=False, choices=['present', 'absent', 'dump']),
             timeout=dict(type='int', default=10)
         ),
         supports_check_mode=True
@@ -385,8 +381,8 @@ def main():
 
     if not HAS_ZABBIX_API:
         module.fail_json(msg="Missing required zabbix-api module " +
-                             "(check docs or install with: " +
-                             "pip install zabbix-api)")
+                         "(check docs or install with: " +
+                         "pip install zabbix-api)")
 
     server_url = module.params['server_url']
     login_user = module.params['login_user']
@@ -417,9 +413,9 @@ def main():
     try:
         zbx = ZabbixAPI(server_url, timeout=timeout, user=http_login_user, passwd=http_login_password, validate_certs=validate_certs)
         zbx.login(login_user, login_password)
-    except ZabbixAPIException as e:
-        module.fail_json(msg="Failed to connect to Zabbix server: %s" % e)
-    
+    except ZabbixAPIException as error:
+        module.fail_json(msg="Failed to connect to Zabbix server: %s" % error)
+
     #load UserGroup module
     user = User(module, zbx)
     user_id = user.get_id(alias)
@@ -428,7 +424,7 @@ def main():
     if state == "absent":
         if not user_id:
             module.exit_json(changed=False, msg="User not found, no change: %s" % alias)
-        user.delete_user(user_id)
+        user.delete(user_id)
         module.exit_json(changed=True, result="Successfully deleted user %s" % alias)
 
     elif state == "dump":
@@ -439,16 +435,16 @@ def main():
     elif state == "present":
         #Does not exists going to create it
         if not groups:
-                self._module.fail_json(msg="Missing argument groups to create user %s" % alias)  
+            module.fail_json(msg="Missing argument groups to create user %s" % alias)
         if not user_id:
-            if password == None:
-                self._module.fail_json(msg="Missing argument password to create user %s" % alias)  
+            if password == '':
+                module.fail_json(msg="Missing argument password to create user %s" % alias)
             user.create(alias, name, surname, password, user_type, groups, medias, autologin, autologout, lang, refresh, rows_per_page, theme)
             module.exit_json(changed=True, msg="User %s created" % alias)
         #Else we update it
         else:
-            if update_password == 'always' and password == None:
-                self._module.fail_json(msg="Missing argument password to update user %s" % alias)
+            if update_password == 'always' and password == '':
+                module.fail_json(msg="Missing argument password to update user %s" % alias)
             elif update_password == 'on_create':
                 password = None
             changed = user.update(user_id, alias, name, surname, password, user_type, groups, medias, autologin, autologout, lang, refresh, rows_per_page, theme)
