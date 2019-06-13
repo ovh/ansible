@@ -97,35 +97,30 @@ template_json:
   type: str
   sample: {
     "group_json": {
-        "debug_mode": "0", 
-        "gui_access": "0", 
-        "name": "Test group", 
+        "debug_mode": "0",
+        "gui_access": "0",
+        "name": "Test group",
         "rights": [
             {
-                "id": "20", 
+                "id": "20",
                 "permission": "3"
-            }, 
-        ], 
+            },
+        ],
         "users": [
             {
                 "userid": "6"
-            }, 
+            },
             {
                 "userid": "12"
             }
-        ], 
-        "users_status": "0", 
+        ],
+        "users_status": "0",
         "usrgrpid": "19"
-    } 
+    }
   }
 '''
 
-from distutils.version import LooseVersion
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils._text import to_native
-import json
-import traceback
-
 
 try:
     from zabbix_api import ZabbixAPI, ZabbixAPIException
@@ -162,14 +157,8 @@ class UserGroup(object):
         else:
             debug_mode = 0
 
-        if gui_access == 'default':
-            gui_access = 0
-        elif gui_access == 'internal':
-             gui_access = 1
-        elif gui_access == 'ldap':
-             gui_access = 2
-        elif gui_access == 'disabled':
-             gui_access = 3
+        gui_acesses = {'default': '0', 'internal': '1', 'ldap': '2', 'disabled': '3'}
+        gui_access = gui_acesses[gui_access]
 
         if users_status == 'enabled':
             users_status = 0
@@ -188,7 +177,7 @@ class UserGroup(object):
             elif right['permission'] == 'RW':
                 permission = "3"
 
-            new_rights.append( {'id':group_id, 'permission':permission} )
+            new_rights.append({'id':group_id, 'permission':permission})
 
         userids = []
         for user in users:
@@ -212,7 +201,7 @@ class UserGroup(object):
         return request
 
     def compare_config(self, generated, current):
-        items_to_check = ['gui_access','users_status','debug_mode']
+        items_to_check = ['gui_access', 'users_status', 'debug_mode']
         for item in items_to_check:
             if str(generated[item]) != str(current[item]):
                 return True
@@ -277,7 +266,7 @@ def main():
                 required=False,
                 opstions=dict(
                     host_group=dict(type='str', required=True),
-                    permission=dict(type='str', required=True, choices=['denied','RO','RW'])
+                    permission=dict(type='str', required=True, choices=['denied', 'RO', 'RW'])
                 )
             ),
             users=dict(
@@ -286,7 +275,7 @@ def main():
                 required=False,
                 elements='str'
             ),
-            state=dict(default="present", choices=['present', 'absent','dump']),
+            state=dict(default="present", choices=['present', 'absent', 'dump']),
             timeout=dict(type='int', default=10)
         ),
         supports_check_mode=True
@@ -294,8 +283,8 @@ def main():
 
     if not HAS_ZABBIX_API:
         module.fail_json(msg="Missing required zabbix-api module " +
-                             "(check docs or install with: " +
-                             "pip install zabbix-api)")
+                         "(check docs or install with: " +
+                         "pip install zabbix-api)")
 
     server_url = module.params['server_url']
     login_user = module.params['login_user']
@@ -318,9 +307,9 @@ def main():
     try:
         zbx = ZabbixAPI(server_url, timeout=timeout, user=http_login_user, passwd=http_login_password, validate_certs=validate_certs)
         zbx.login(login_user, login_password)
-    except ZabbixAPIException as e:
-        module.fail_json(msg="Failed to connect to Zabbix server: %s" % e)
-    
+    except ZabbixAPIException as error:
+        module.fail_json(msg="Failed to connect to Zabbix server: %s" % error)
+
     #load UserGroup module
     user_group = UserGroup(module, zbx)
     group_id = user_group.get_group_id(name)
