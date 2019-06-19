@@ -21,7 +21,7 @@ description:
     - Create/update/delete/dump Zabbix user group.
 version_added: "2.9"
 author:
-    - "Emmanuel Riviere, OVH"
+    - Emmanuel Riviere (@emriver)
 requirements:
     - "python >= 2.7"
     - "zabbix-api >= 0.5.3"
