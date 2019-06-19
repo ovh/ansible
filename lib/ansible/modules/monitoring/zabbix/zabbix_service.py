@@ -22,7 +22,7 @@ description:
     - Does not handle service parent update
 version_added: "2.9"
 author:
-    - "Emmanuel Riviere, OVH"
+    - Emmanuel Riviere (@emriver)
 requirements:
     - "python >= 2.6"
     - "zabbix-api >= 0.5.3"
