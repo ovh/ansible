@@ -84,7 +84,7 @@ options:
         type: str
         choices: [present, absent, dump]
         default: present
-        
+ 
 extends_documentation_fragment:
     - zabbix
 '''
@@ -331,7 +331,6 @@ def main():
 
     zbx = None
 
-
     # Login to zabbix
     try:
         zbx = ZabbixAPI(server_url, timeout=timeout, user=http_login_user, passwd=http_login_password, validate_certs=validate_certs)
@@ -364,6 +363,7 @@ def main():
         else:
             changed = user_group.update_group(group_id, name, debug_mode, gui_access, users_status, rights, users)
             module.exit_json(changed=changed)
+
 
 if __name__ == '__main__':
     main()
