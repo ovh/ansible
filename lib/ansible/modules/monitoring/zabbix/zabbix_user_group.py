@@ -84,7 +84,7 @@ options:
         type: str
         choices: [present, absent, dump]
         default: present
- 
+
 extends_documentation_fragment:
     - zabbix
 '''
