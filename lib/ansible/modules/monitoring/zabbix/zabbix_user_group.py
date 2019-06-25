@@ -30,34 +30,61 @@ options:
         description:
             - Name of the Zabbix user group
         required: true
+        type: str
     debug_mode:
         description:
             - Enable or disable debug mode.
         required: false
-        choices: [disabled, enabled]
-        default: "disabled"
+        type: bool
+        default: no
     gui_access:
         description:
             - Frontend authentication method.
         required: false
+        type: str
         choices: [default,internal,ldap,disabled]
         default: "default"
     users_status:
         description:
             - Whether the group is enabled of disabled
         required: false
+        type: str
         choices: [enabled, disabled]
-        defaut: "enabled"
+        default: "enabled"
     rights:
         description:
             - List of permissions associated to the group
             - Each right must contain a host_group and a permission (denied,RO,RW)
         required: false
+        type: list
+        suboptions:
+            host_group:
+                description:
+                    - Host group name
+                type: str
+                required: true
+            permission:
+                description:
+                    - Permission associated with that group
+                type: str
+                required: true
+                choices: [denied, RO, RW]
     users:
         description:
             -List of users to add in the group
         required: false
-
+        type: list
+    state:
+        description:
+            - State of the group
+            - If C(present), the group will be created or updated if the group configuration is different
+            - If C(absent), the group will be deleted
+            - If C(dump), the group data will be dumped as json
+        required: false
+        type: str
+        choices: [present, absent, dump]
+        default: present
+        
 extends_documentation_fragment:
     - zabbix
 '''
@@ -137,7 +164,7 @@ class UserGroup(object):
 
     def get_group_id(self, group_name):
         group_id = None
-        groups = self._zapi.usergroup.get({'filter':{'name':group_name}})
+        groups = self._zapi.usergroup.get({'filter': {'name': group_name}})
         if len(groups) == 1:
             group_id = groups[0]['usrgrpid']
         return group_id
@@ -148,7 +175,7 @@ class UserGroup(object):
         self._zapi.usergroup.delete([group_id])
 
     def dump_group(self, group_id):
-        groups = self._zapi.usergroup.get({'output':'extend', 'usrgrpids':group_id, 'selectRights':1, 'selectUsers':1})
+        groups = self._zapi.usergroup.get({'output': 'extend', 'usrgrpids': group_id, 'selectRights': 1, 'selectUsers': 1})
         return groups[0]
 
     def generate_group_config(self, name, debug_mode, gui_access, users_status, rights, users):
@@ -177,7 +204,7 @@ class UserGroup(object):
             elif right['permission'] == 'RW':
                 permission = "3"
 
-            new_rights.append({'id':group_id, 'permission':permission})
+            new_rights.append({'id': group_id, 'permission': permission})
 
         userids = []
         for user in users:
@@ -194,8 +221,8 @@ class UserGroup(object):
             'rights': new_rights
         }
 
-        #won't push an empty array to avoid removing all users from a group if none provided
-        if len(userids):
+        # Won't push an empty array to avoid removing all users from a group if none provided
+        if userids:
             request['userids'] = userids
 
         return request
@@ -206,13 +233,13 @@ class UserGroup(object):
             if str(generated[item]) != str(current[item]):
                 return True
 
-        #Users will only be compared if some are provided
-        #Otherwise it will remove user already added in the group
+        # Users will only be compared if some are provided
+        # Otherwise it will remove user already added in the group
         if 'userids' in generated:
             if set(generated['userids']) != set([user['userid'] for user in current['users']]):
                 return True
 
-        #rights check
+        # Rights check
         new_generated_rights = []
         for rights in generated['rights']:
             new_generated_rights.append(int(rights['permission'] + rights['id']))
@@ -245,6 +272,7 @@ class UserGroup(object):
             self._zapi.usergroup.update(generated_config)
 
         return changed
+
 
 def main():
     module = AnsibleModule(
@@ -303,18 +331,19 @@ def main():
 
     zbx = None
 
-    #login to zabbix
+
+    # Login to zabbix
     try:
         zbx = ZabbixAPI(server_url, timeout=timeout, user=http_login_user, passwd=http_login_password, validate_certs=validate_certs)
         zbx.login(login_user, login_password)
     except ZabbixAPIException as error:
         module.fail_json(msg="Failed to connect to Zabbix server: %s" % error)
 
-    #load UserGroup module
+    # Load UserGroup module
     user_group = UserGroup(module, zbx)
     group_id = user_group.get_group_id(name)
 
-    #delete group
+    # Delete group
     if state == "absent":
         if not group_id:
             module.exit_json(changed=False, msg="User group not found, no change: %s" % name)
@@ -327,11 +356,11 @@ def main():
         module.exit_json(changed=False, group_json=user_group.dump_group(group_id))
 
     elif state == "present":
-        #Does not exists going to create it
+        # Does not exists going to create it
         if not group_id:
             user_group.create_group(name, debug_mode, gui_access, users_status, rights, users)
             module.exit_json(changed=True, result="Successfully created group %s" % name)
-        #Else we update it
+        # Else we update it
         else:
             changed = user_group.update_group(group_id, name, debug_mode, gui_access, users_status, rights, users)
             module.exit_json(changed=changed)
