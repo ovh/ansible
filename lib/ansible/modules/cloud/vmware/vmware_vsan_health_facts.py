@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright: (c) 2018, Terry Jones <terry.jones@example.org>
+# (c) 2019, OVH SAS
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 ANSIBLE_METADATA = {
@@ -37,7 +37,7 @@ extends_documentation_fragment:
     - vmware.documentation
 
 author:
-    - Erwan Que©lin (@equelin) <erwan.quelin@corp.ovh.com>
+    - Erwan Quelin (@equelin)
 '''
 
 EXAMPLES = '''
