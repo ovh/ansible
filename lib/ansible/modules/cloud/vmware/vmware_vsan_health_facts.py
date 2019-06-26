@@ -1,0 +1,170 @@
+#!/usr/bin/python
+
+# Copyright: (c) 2018, Terry Jones <terry.jones@example.org>
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
+DOCUMENTATION = '''
+---
+module: vmware_vsan_health_facts
+
+short_description: Gather facts about a VMware vSAN cluster's health.
+
+version_added: "2.9"
+
+description:
+    - "Gather facts about a VMware vSAN cluster's health"
+
+options:
+    cluster_name:
+        description:
+            - Name of the vSAN cluster
+        required: true
+        type: string
+    fetch_from_cache:
+        description:
+            - True to return the result from cache directly instead of running the full health check.
+        required: false
+        default: false
+        type: bool
+
+extends_documentation_fragment:
+    - vmware.documentation
+
+author:
+    - Erwan Que©lin (@equelin) <erwan.quelin@corp.ovh.com>
+'''
+
+EXAMPLES = '''
+- name: Gather health facts from a vSAN's cluster
+  hosts: localhost
+  gather_facts: 'no'
+  vmware_vsan_health_facts:
+    hostname: "{{ vcenter_hostname }}"
+    username: "{{ vcenter_username }}"
+    password: "{{ vcenter_password }}"
+    cluster_name: 'vSAN01'
+    fetch_from_cache: 'False'
+  register: facts
+'''
+
+RETURN = '''
+health:
+    description: vSAN cluster health facts
+    type: dict
+    sample: {
+        "_vimtype": "vim.cluster.VsanClusterHealthSummary",
+        "burnInTest": null,
+        "clusterStatus": {
+            "_vimtype": "vim.cluster.VsanClusterHealthSystemStatusResult",
+            "goalState": "installed",
+            "status": "green",
+            "trackedHostsStatus": [
+                {
+                    "_vimtype": "vim.host.VsanHostHealthSystemStatusResult",
+                    "hostname": "esxi01.example.com",
+                    "issues": [],
+                    "status": "green"
+                },
+                {
+                    "_vimtype": "vim.host.VsanHostHealthSystemStatusResult",
+                    "hostname": "esxi04.example.com",
+                    "issues": [],
+                    "status": "green"
+                },
+                {
+                    "_vimtype": "vim.host.VsanHostHealthSystemStatusResult",
+                    "hostname": "esxi02.example.com",
+                    "issues": [],
+                    "status": "green"
+                },
+                {
+                    "_vimtype": "vim.host.VsanHostHealthSystemStatusResult",
+                    "hostname": "esxi03.example.com",
+                    "issues": [],
+                    "status": "green"
+                }
+            ],
+            "untrackedHosts": []
+        }
+    }
+'''
+
+try:
+    from pyVmomi import vim, vmodl, VmomiSupport
+    HAS_PYVMOMI = True
+    HAS_PYVMOMIJSON = hasattr(VmomiSupport, 'VmomiJSONEncoder')
+except ImportError:
+    HAS_PYVMOMI = False
+    HAS_PYVMOMIJSON = False
+
+try:
+    import vsanapiutils
+    import vsanmgmtObjects
+    HAS_VSANPYTHONSDK = True
+except ImportError:
+    HAS_VSANPYTHONSDK = False
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.vmware import (connect_to_api, vmware_argument_spec, find_cluster_by_name)
+
+import json
+
+
+def run_module():
+    argument_spec = vmware_argument_spec()
+    argument_spec.update(dict(cluster_name=dict(required=True, type='str')))
+    argument_spec.update(dict(fetch_from_cache=dict(required=False, type='bool')))
+
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=False)
+
+    if not HAS_PYVMOMI:
+        module.fail_json(msg='pyvmomi is required for this module')
+
+    if not HAS_VSANPYTHONSDK:
+        module.fail_json(msg='vSAN python SDK is required for this module')
+
+    if not HAS_PYVMOMIJSON:
+        self.module.fail_json(msg='The installed version of pyvmomi lacks JSON output support; need pyvmomi>6.7.1')
+
+    try:
+        si, content = connect_to_api(module, True, True)
+    except Exception as e:
+        module.fail_json(msg=e.msg)
+
+    client_stub = si._GetStub()
+    ssl_context = client_stub.schemeArgs.get('context')
+
+    cluster = find_cluster_by_name(content, module.params['cluster_name'])
+
+    apiVersion = vsanapiutils.GetLatestVmodlVersion(module.params['hostname'])
+    vcMos = vsanapiutils.GetVsanVcMos(client_stub, context=ssl_context, version=apiVersion)
+
+    vsanClusterHealthSystem = vcMos['vsan-cluster-health-system']
+
+    try:
+        clusterHealth = vsanClusterHealthSystem.VsanQueryVcClusterHealthSummary(
+            cluster=cluster,
+            fetchFromCache=module.params['fetch_from_cache']
+        )
+    except vmodl.fault.NotFound as not_found:
+        module.fail_json(msg=not_found.msg)
+    except vmodl.fault.RuntimeFault as runtime_fault:
+        module.fail_json(msg=runtime_fault.msg)
+
+    health = json.dumps(clusterHealth, cls=VmomiSupport.VmomiJSONEncoder, sort_keys=True, strip_dynamic=True)
+
+    module.exit_json(changed=False, health=health)
+
+
+def main():
+    run_module()
+
+
+if __name__ == '__main__':
+    main()

@@ -170,8 +170,8 @@ def find_datastore_by_name(content, datastore_name):
     return find_object_by_name(content, datastore_name, [vim.Datastore])
 
 
-def find_dvs_by_name(content, switch_name):
-    return find_object_by_name(content, switch_name, [vim.DistributedVirtualSwitch])
+def find_dvs_by_name(content, switch_name, folder=None):
+    return find_object_by_name(content, switch_name, [vim.DistributedVirtualSwitch], folder=folder)
 
 
 def find_hostsystem_by_name(content, hostname):
@@ -490,7 +490,7 @@ def vmware_argument_spec():
     )
 
 
-def connect_to_api(module, disconnect_atexit=True):
+def connect_to_api(module, disconnect_atexit=True, return_si=False):
     hostname = module.params['hostname']
     username = module.params['username']
     password = module.params['password']
@@ -555,6 +555,9 @@ def connect_to_api(module, disconnect_atexit=True):
     # Also removal significantly speeds up the return of the module
     if disconnect_atexit:
         atexit.register(connect.Disconnect, service_instance)
+    if return_si:
+        return service_instance, service_instance.RetrieveContent()
+
     return service_instance.RetrieveContent()
 
 
@@ -806,7 +809,7 @@ class PyVmomi(object):
         self.params = module.params
         self.si = None
         self.current_vm_obj = None
-        self.content = connect_to_api(self.module)
+        self.si, self.content = connect_to_api(self.module)
         self.custom_field_mgr = []
         if self.content.customFieldsManager:  # not an ESXi
             self.custom_field_mgr = self.content.customFieldsManager.field
