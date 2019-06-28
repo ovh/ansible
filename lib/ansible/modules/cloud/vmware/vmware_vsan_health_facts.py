@@ -100,6 +100,7 @@ try:
     HAS_PYVMOMI = True
     HAS_PYVMOMIJSON = hasattr(VmomiSupport, 'VmomiJSONEncoder')
 except ImportError:
+    PYVMOMI_IMP_ERR = traceback.format_exc()
     HAS_PYVMOMI = False
     HAS_PYVMOMIJSON = False
 
@@ -108,10 +109,11 @@ try:
     import vsanmgmtObjects
     HAS_VSANPYTHONSDK = True
 except ImportError:
+    VSANPYTHONSDK_IMP_ERR = traceback.format_exc()
     HAS_VSANPYTHONSDK = False
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.vmware import (connect_to_api, vmware_argument_spec, find_cluster_by_name)
+from ansible.module_utils.basic import AnsibleModule, missing_required_lib
+from ansible.module_utils.vmware import connect_to_api, vmware_argument_spec, find_cluster_by_name
 
 import json
 
@@ -124,13 +126,15 @@ def run_module():
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=False)
 
     if not HAS_PYVMOMI:
-        module.fail_json(msg='pyvmomi is required for this module')
+        module.fail_json(msg=missing_required_lib('PyVmomi'),
+                             exception=PYVMOMI_IMP_ERR)
 
     if not HAS_VSANPYTHONSDK:
-        module.fail_json(msg='vSAN python SDK is required for this module')
+        module.fail_json(msg=missing_required_lib('vSAN Management SDK for Python'),
+                             exception=VSANPYTHONSDK_IMP_ERR)
 
     if not HAS_PYVMOMIJSON:
-        self.module.fail_json(msg='The installed version of pyvmomi lacks JSON output support; need pyvmomi>6.7.1')
+        module.fail_json(msg='The installed version of pyvmomi lacks JSON output support; need pyvmomi>6.7.1')
 
     try:
         si, content = connect_to_api(module, True, True)
