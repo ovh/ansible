@@ -41,7 +41,7 @@ author:
 '''
 
 EXAMPLES = '''
-- name: Gather health facts from a vSAN's cluster
+- name: Gather health facts from a vSAN cluster
   hosts: localhost
   gather_facts: 'no'
   vmware_vsan_health_facts:
@@ -116,7 +116,7 @@ from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 from ansible.module_utils.vmware import connect_to_api, vmware_argument_spec, find_cluster_by_name
 
 import json
-
+import traceback
 
 def run_module():
     argument_spec = vmware_argument_spec()
@@ -126,12 +126,10 @@ def run_module():
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=False)
 
     if not HAS_PYVMOMI:
-        module.fail_json(msg=missing_required_lib('PyVmomi'),
-                             exception=PYVMOMI_IMP_ERR)
+        module.fail_json(msg=missing_required_lib('PyVmomi'), exception=PYVMOMI_IMP_ERR)
 
     if not HAS_VSANPYTHONSDK:
-        module.fail_json(msg=missing_required_lib('vSAN Management SDK for Python'),
-                             exception=VSANPYTHONSDK_IMP_ERR)
+        module.fail_json(msg=missing_required_lib('vSAN Management SDK for Python'), exception=VSANPYTHONSDK_IMP_ERR)
 
     if not HAS_PYVMOMIJSON:
         module.fail_json(msg='The installed version of pyvmomi lacks JSON output support; need pyvmomi>6.7.1')
