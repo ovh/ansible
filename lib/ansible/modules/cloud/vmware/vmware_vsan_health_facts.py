@@ -118,6 +118,7 @@ except ImportError:
 from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 from ansible.module_utils.vmware import connect_to_api, vmware_argument_spec, find_cluster_by_name
 
+
 def run_module():
     argument_spec = vmware_argument_spec()
     argument_spec.update(dict(cluster_name=dict(required=True, type='str')))
