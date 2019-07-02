@@ -41,7 +41,7 @@ author:
 '''
 
 EXAMPLES = '''
-- name: Gather health facts from a vSAN cluster
+- name: Gather health facts from a vSAN's cluster
   hosts: localhost
   gather_facts: 'no'
   vmware_vsan_health_facts:
@@ -95,6 +95,9 @@ health:
     }
 '''
 
+import json
+import traceback
+
 try:
     from pyVmomi import vim, vmodl, VmomiSupport
     HAS_PYVMOMI = True
@@ -114,9 +117,6 @@ except ImportError:
 
 from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 from ansible.module_utils.vmware import connect_to_api, vmware_argument_spec, find_cluster_by_name
-
-import json
-import traceback
 
 def run_module():
     argument_spec = vmware_argument_spec()
