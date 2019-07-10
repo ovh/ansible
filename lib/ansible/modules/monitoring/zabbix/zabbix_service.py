@@ -48,7 +48,7 @@ options:
         type: bool
     algorithm:
         description:
-            - ALigorithm used to calculate the sla
+            - Algorithm used to calculate the sla
         required: false
         type: str
         choices: [no, one_child, all_childs]
@@ -89,7 +89,7 @@ EXAMPLES = '''
 - name: Manage services
   local_action:
         module: zabbix_service
-        server_url: "https://192.168.1.1
+        server_url: "https://192.168.1.1"
         login_user: username
         login_password: password
         name: apache2 service
